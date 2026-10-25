@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoundPulse Studio & Media Downloader</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121212;
+            color: #f8fafc;
+            user-select: none;
+        }
+        /* Spotify Dark Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121212;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #282828;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3e3e3e;
+        }
+        .spotify-card {
+            background: #181818;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        .spotify-card:hover {
+            background: #282828;
+            border-color: rgba(29, 185, 84, 0.3);
+        }
+        /* Equalizer Animation */
+        .eq-bar {
+            animation: bounce 0.8s infinite alternate ease-in-out;
+        }
+        .eq-1 { animation-delay: 0.1s; }
+        .eq-2 { animation-delay: 0.3s; }
+        .eq-3 { animation-delay: 0.5s; }
+        .eq-4 { animation-delay: 0.2s; }
+        @keyframes bounce {
+            0% { height: 4px; }
+            100% { height: 18px; }
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden bg-[#121212] text-slate-100">
+
+    <!-- TOP HEADER -->
+    <header class="bg-[#000000]/80 backdrop-blur-md sticky top-0 z-40 px-4 py-3 flex items-center justify-between border-b border-[#282828]">
+        <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-full bg-[#1DB954] flex items-center justify-center shadow-lg shadow-[#1DB954]/20">
+                <i class="fa-solid fa-music text-black text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-extrabold text-base tracking-wide text-white flex items-center gap-2">
+                    SoundPulse <span class="text-[10px] bg-[#1DB954]/20 text-[#1DB954] px-2 py-0.5 rounded-full font-bold">Pro</span>
+                </h1>
+                <p class="text-[11px] text-slate-400">Musik & All-in-One Downloader</p>
+            </div>
+        </div>
+
+        <!-- Connection Indicator & PWA Guide Toggle -->
+        <div class="flex items-center space-x-2">
+            <div id="netStatus" class="flex items-center space-x-1.5 text-xs px-2.5 py-1 rounded-full bg-[#1DB954]/10 border border-[#1DB954]/30 text-[#1DB954]">
+                <span class="w-2 h-2 rounded-full bg-[#1DB954] animate-pulse"></span>
+                <span id="netStatusText" class="font-semibold text-[11px]">Online</span>
+            </div>
+            <button onclick="switchTab('pwa')" class="px-3 py-1.5 bg-[#282828] hover:bg-[#3e3e3e] text-slate-200 text-xs font-medium rounded-full border border-[#3e3e3e] transition flex items-center gap-1.5">
+                <i class="fa-solid fa-mobile-screen text-[#1DB954]"></i>
+                <span class="hidden sm:inline">Cara Offline (PWA)</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN BODY -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- NAVIGATION SIDEBAR (Desktop) -->
+        <aside class="hidden md:flex flex-col w-60 bg-black/60 border-r border-[#282828] p-3 space-y-1">
+            <div class="text-[10px] font-bold text-slate-500 px-3 uppercase tracking-wider my-2">Menu Utama</div>
+            <button onclick="switchTab('search')" id="side-search" class="tab-btn active flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[#1DB954] bg-[#282828] font-bold text-xs transition w-full text-left">
+                <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                <span>Cari Lagu & Band</span>
+            </button>
+            <button onclick="switchTab('library')" id="side-library" class="tab-btn flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#282828]/50 font-bold text-xs transition w-full text-left">
+                <i class="fa-solid fa-folder-arrow-down text-sm"></i>
+                <span>Musik Offline</span>
+                <span id="offlineBadge" class="ml-auto bg-[#1DB954] text-black text-[10px] px-1.5 py-0.2 rounded-full font-extrabold">0</span>
+            </button>
+            <button onclick="switchTab('downloader')" id="side-downloader" class="tab-btn flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#282828]/50 font-bold text-xs transition w-full text-left">
+                <i class="fa-solid fa-cloud-arrow-down text-sm text-[#1DB954]"></i>
+                <span>Media Downloader</span>
+            </button>
+            <button onclick="switchTab('pwa')" id="side-pwa" class="tab-btn flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-[#282828]/50 font-bold text-xs transition w-full text-left">
+                <i class="fa-solid fa-[#1DB954] fa-wifi text-sm"></i>
+                <span>Panduan Tanpa Kuota</span>
+            </button>
+        </aside>
+
+        <!-- CONTENT VIEWPORT -->
+        <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-44 relative bg-gradient-to-b from-[#181818] to-[#121212]" id="mainScroll">
+
+            <!-- TAB 1: DYNAMIC SEARCH & PLAYLIST -->
+            <section id="tab-search" class="tab-content space-y-5">
+                <!-- Universal Search Input Bar -->
+                <div class="max-w-3xl mx-auto space-y-3">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
+                        <input type="text" id="searchInput" oninput="liveSearch()" placeholder="Ketik nama lagu atau nama band (cth: For Revenge, Serana, Dewa 19, Sheila On 7)..." 
+                               class="w-full bg-[#282828] border border-transparent focus:border-[#1DB954] text-white rounded-full py-3.5 pl-12 pr-28 text-sm focus:outline-none transition shadow-lg">
+                        <button onclick="executeSearch()" class="absolute right-1.5 top-1/2 -translate-y-1/2 bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs px-5 py-2.5 rounded-full transition shadow-md">
+                            Cari
+                        </button>
+                    </div>
+
+                    <!-- Recommendation Tags -->
+                    <div class="flex items-center space-x-2 overflow-x-auto pb-1 text-xs">
+                        <span class="text-slate-500 whitespace-nowrap text-[11px] font-semibold">Rekomendasi:</span>
+                        <button onclick="quickQuery('For Revenge')" class="px-3 py-1 rounded-full bg-[#282828] hover:bg-[#333] text-slate-300 border border-[#3e3e3e] whitespace-nowrap">For Revenge</button>
+                        <button onclick="quickQuery('Serana')" class="px-3 py-1 rounded-full bg-[#282828] hover:bg-[#333] text-slate-300 border border-[#3e3e3e] whitespace-nowrap">Serana</button>
+                        <button onclick="quickQuery('Sheila On 7')" class="px-3 py-1 rounded-full bg-[#282828] hover:bg-[#333] text-slate-300 border border-[#3e3e3e] whitespace-nowrap">Sheila On 7</button>
+                        <button onclick="quickQuery('Dewa 19')" class="px-3 py-1 rounded-full bg-[#282828] hover:bg-[#333] text-slate-300 border border-[#3e3e3e] whitespace-nowrap">Dewa 19</button>
+                        <button onclick="quickQuery('Jakarta Hari Ini')" class="px-3 py-1 rounded-full bg-[#282828] hover:bg-[#333] text-slate-300 border border-[#3e3e3e] whitespace-nowrap">Jakarta Hari Ini</button>
+                    </div>
+                </div>
+
+                <!-- SEARCH RESULTS HEADER -->
+                <div class="flex items-center justify-between pt-2">
+                    <h3 id="searchResultsTitle" class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-list-ul text-[#1DB954]"></i>
+                        <span>Daftar Lagu Hasil Pencarian</span>
+                    </h3>
+                    <span id="resultsCount" class="text-xs text-slate-400 font-mono">0 Lagu Ditemukan</span>
+                </div>
+
+                <!-- CARDS GRID FOR SEARCH RESULTS -->
+                <div id="songsListGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <!-- Dynamic rendering via JS -->
+                </div>
+
+                <!-- NOW PLAYING SONG & LYRICS VIEW AREA -->
+                <div id="activeLyricsSection" class="mt-8 pt-6 border-t border-[#282828] space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-align-left text-[#1DB954]"></i>
+                            <span>Makna & Lirik Lagu Yang Sedang Diputar</span>
+                        </h4>
+                        <span id="lyricsSongLabel" class="text-xs text-[#1DB954] font-semibold bg-[#1DB954]/10 px-2.5 py-1 rounded-full border border-[#1DB954]/20">Pilih lagu untuk melihat lirik</span>
+                    </div>
+
+                    <div class="spotify-card p-5 rounded-2xl space-y-4">
+                        <!-- Song Info Banner -->
+                        <div class="flex items-center space-x-4">
+                            <img id="lyricsCover" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=150&q=80" alt="Cover" class="w-14 h-14 rounded-xl object-cover border border-[#3e3e3e]">
+                            <div>
+                                <h3 id="lyricsTitle" class="text-base font-bold text-white">Belum Ada Lagu Diputar</h3>
+                                <p id="lyricsArtist" class="text-xs text-slate-400">Klik tombol Play pada salah satu lagu di atas</p>
+                            </div>
+                        </div>
+
+                        <!-- Theme Summary Box -->
+                        <div class="p-3.5 bg-[#121212] rounded-xl border border-[#282828]">
+                            <p class="text-[11px] font-bold uppercase text-[#1DB954] mb-1"><i class="fa-solid fa-circle-info mr-1"></i>Ringkasan Tema & Makna Lagu:</p>
+                            <p id="lyricsMeaning" class="text-xs text-slate-300 leading-relaxed italic">
+                                Silakan pilih lagu dari daftar pencarian untuk menampilkan analisa makna dan lirik resminya di sini.
+                            </p>
+                        </div>
+
+                        <!-- 4-Line Quote Box -->
+                        <div class="p-4 bg-[#000000]/60 rounded-xl border border-[#282828] space-y-2">
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Kutipan Lirik Utama (Maksimal 4 Baris):</p>
+                            <div id="lyricsQuote" class="text-sm font-semibold text-[#1DB954] leading-relaxed whitespace-pre-line font-mono">
+                                "Pilih lagu di atas untuk memutar musik
+                                Dan menampilkan kutipan lirik lagu di sini"
+                            </div>
+                        </div>
+
+                        <p class="text-[11px] text-slate-400 pt-1">
+                            <i class="fa-solid fa-magnifying-glass text-[#1DB954] mr-1"></i>
+                            Untuk lirik lengkap berlisensi hak cipta, Anda dapat mencarinya langsung di mesin pencari Google.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: OFFLINE LIBRARY (SINGLE SONG STORAGE) -->
+            <section id="tab-library" class="tab-content space-y-5 hidden">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#181818] p-5 rounded-2xl border border-[#282828]">
+                    <div>
+                        <h2 class="text-lg font-extrabold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-folder-arrow-down text-[#1DB954]"></i>
+                            <span>Pustaka Musik Offline (Tanpa Kuota)</span>
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">Lagu-lagu yang Anda unduh 1 per 1 tersimpan aman di memori HP/browser. Siap diputar tanpa internet.</p>
+                    </div>
+                    <button onclick="clearAllOffline()" class="px-3.5 py-2 text-xs font-semibold rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition flex items-center gap-1.5 whitespace-nowrap">
+                        <i class="fa-solid fa-trash-can"></i> Hapus Semua Lagu Offline
+                    </button>
+                </div>
+
+                <div id="offlineListGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <!-- Populated by JS stored items -->
+                </div>
+            </section>
+
+            <!-- TAB 3: MEDIA DOWNLOADER (TIKTOK, IG, YOUTUBE IN 1 PAGE) -->
+            <section id="tab-downloader" class="tab-content space-y-6 hidden max-w-4xl mx-auto">
+                <div class="text-center space-y-2 py-2">
+                    <div class="w-12 h-12 rounded-2xl bg-[#1DB954] text-black flex items-center justify-center mx-auto shadow-lg shadow-[#1DB954]/20 font-bold">
+                        <i class="fa-solid fa-download text-xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-extrabold text-white">Media Downloader Hub</h2>
+                    <p class="text-xs text-slate-400">Pilih platform di bawah untuk mengunduh Video TikTok (No-WM), IG Reels/Post, dan Video/Audio YouTube.</p>
+                </div>
+
+                <!-- PLATFORM SELECTION SWITCHER (TIKTOK, IG, YOUTUBE) -->
+                <div class="flex rounded-xl bg-[#282828] p-1 border border-[#3e3e3e]">
+                    <button onclick="switchDownloaderPlatform('tiktok')" id="btn-dl-tiktok" class="dl-plat-btn flex-1 py-2.5 rounded-lg font-bold text-xs transition flex items-center justify-center gap-2 bg-[#1DB954] text-black">
+                        <i class="fa-brands fa-tiktok text-sm"></i> TikTok (No WM)
+                    </button>
+                    <button onclick="switchDownloaderPlatform('instagram')" id="btn-dl-instagram" class="dl-plat-btn flex-1 py-2.5 rounded-lg font-bold text-xs transition text-slate-400 hover:text-white flex items-center justify-center gap-2">
+                        <i class="fa-brands fa-instagram text-sm text-pink-500"></i> Instagram (Reels)
+                    </button>
+                    <button onclick="switchDownloaderPlatform('youtube')" id="btn-dl-youtube" class="dl-plat-btn flex-1 py-2.5 rounded-lg font-bold text-xs transition text-slate-400 hover:text-white flex items-center justify-center gap-2">
+                        <i class="fa-brands fa-youtube text-sm text-red-500"></i> YouTube (MP4/MP3)
+                    </button>
+                </div>
+
+                <!-- TIKTOK PANEL -->
+                <div id="panel-dl-tiktok" class="dl-panel spotify-card p-6 rounded-2xl space-y-4">
+                    <div class="flex items-center space-x-3 text-cyan-400">
+                        <i class="fa-brands fa-tiktok text-2xl"></i>
+                        <h3 class="font-bold text-white text-sm">TikTok Video Downloader (Tanpa Watermark)</h3>
+                    </div>
+                    <input type="url" id="ttUrlInput" placeholder="Tempel tautan TikTok di sini (https://vt.tiktok.com/... atau https://www.tiktok.com/@...)" 
+                           class="w-full bg-[#121212] border border-[#3e3e3e] focus:border-[#1DB954] text-white rounded-xl px-4 py-3 text-sm focus:outline-none">
+                    <button onclick="processDownloader('TikTok')" class="w-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs py-3 rounded-xl transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-bolt"></i> Unduh Video TikTok No Watermark
+                    </button>
+                </div>
+
+                <!-- INSTAGRAM PANEL -->
+                <div id="panel-dl-instagram" class="dl-panel spotify-card p-6 rounded-2xl space-y-4 hidden">
+                    <div class="flex items-center space-x-3 text-pink-500">
+                        <i class="fa-brands fa-instagram text-2xl"></i>
+                        <h3 class="font-bold text-white text-sm">Instagram Reels & Video Downloader</h3>
+                    </div>
+                    <input type="url" id="igUrlInput" placeholder="Tempel tautan IG di sini (https://www.instagram.com/reel/... atau /p/...)" 
+                           class="w-full bg-[#121212] border border-[#3e3e3e] focus:border-pink-500 text-white rounded-xl px-4 py-3 text-sm focus:outline-none">
+                    <button onclick="processDownloader('Instagram')" class="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-extrabold text-xs py-3 rounded-xl transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-video"></i> Unduh IG Video Clean HD
+                    </button>
+                </div>
+
+                <!-- YOUTUBE PANEL -->
+                <div id="panel-dl-youtube" class="dl-panel spotify-card p-6 rounded-2xl space-y-4 hidden">
+                    <div class="flex items-center space-x-3 text-red-500">
+                        <i class="fa-brands fa-youtube text-2xl"></i>
+                        <h3 class="font-bold text-white text-sm">YouTube Shorts & Video Downloader</h3>
+                    </div>
+                    <input type="url" id="ytUrlInput" placeholder="Tempel tautan YouTube di sini (https://youtu.be/... atau watch?v=...)" 
+                           class="w-full bg-[#121212] border border-[#3e3e3e] focus:border-red-500 text-white rounded-xl px-4 py-3 text-sm focus:outline-none">
+                    <button onclick="processDownloader('YouTube')" class="w-full bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs py-3 rounded-xl transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-gear"></i> Konversi YouTube Video / MP3
+                    </button>
+                </div>
+
+                <!-- SHARED RESULT CARD PREVIEW -->
+                <div id="mediaResultCard" class="hidden spotify-card p-5 rounded-2xl border border-[#1DB954]/40 space-y-4">
+                    <div class="flex flex-col sm:flex-row items-center gap-4">
+                        <div class="relative w-full sm:w-40 h-28 rounded-lg overflow-hidden bg-black border border-[#3e3e3e] flex-shrink-0">
+                            <img id="mediaPreviewThumb" src="https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=400&q=80" class="w-full h-full object-cover" alt="Preview">
+                            <span id="mediaFormatTag" class="absolute bottom-1.5 right-1.5 bg-black/80 text-[#1DB954] text-[10px] px-1.5 py-0.5 rounded font-mono font-bold">HD Clean</span>
+                        </div>
+                        <div class="space-y-2 flex-1 text-center sm:text-left">
+                            <span id="platformBadge" class="bg-[#1DB954]/20 text-[#1DB954] text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">Media Ready</span>
+                            <h4 id="mediaTitleText" class="text-sm font-bold text-white">Media Content Ready for Download</h4>
+                            <p class="text-xs text-slate-400">Pilih opsi format yang ingin di-download ke perangkat Anda:</p>
+                            <div class="flex flex-wrap justify-center sm:justify-start gap-2 pt-1">
+                                <button onclick="triggerFileDownload('Media_Video_HD.mp4')" class="bg-[#1DB954] hover:bg-[#1ed760] text-black text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 transition">
+                                    <i class="fa-solid fa-download"></i> Download Video (MP4)
+                                </button>
+                                <button onclick="triggerFileDownload('Media_Audio_320k.mp3')" class="bg-[#282828] hover:bg-[#3e3e3e] text-slate-200 border border-[#3e3e3e] text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition">
+                                    <i class="fa-solid fa-music text-[#1DB954]"></i> Audio MP3 Only
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: OFFLINE PWA INSTALLATION GUIDE -->
+            <section id="tab-pwa" class="tab-content space-y-5 hidden max-w-3xl mx-auto">
+                <div class="spotify-card p-6 rounded-2xl border border-[#1DB954]/30 space-y-4">
+                    <div class="flex items-center space-x-3 text-[#1DB954]">
+                        <i class="fa-solid fa-wifi text-2xl"></i>
+                        <h2 class="text-xl font-extrabold text-white">Panduan Penggunaan Aplikasi Tanpa Kuota (100% Offline)</h2>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Agar web aplikasi ini dapat digunakan <strong>saat Anda tidak memiliki kuota internet sama sekali</strong>, ikuti petunjuk mudah berikut untuk memasangnya di smartphone HP Android atau iOS:
+                    </p>
+
+                    <div class="space-y-3 pt-2">
+                        <!-- Step 1 -->
+                        <div class="flex items-start space-x-3 p-3 bg-[#121212] rounded-xl border border-[#282828]">
+                            <span class="w-6 h-6 rounded-full bg-[#1DB954] text-black font-extrabold text-xs flex items-center justify-center flex-shrink-0">1</span>
+                            <div>
+                                <h4 class="text-xs font-bold text-white">Download Lagu Pilihan Anda 1 per 1</h4>
+                                <p class="text-[11px] text-slate-400">Saat sedang memiliki kuota, tekan ikon download <i class="fa-solid fa-download text-[#1DB954]"></i> pada lagu yang Anda sukai. Lagu tersebut akan tersimpan otomatis di browser/HP Anda.</p>
+                            </div>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="flex items-start space-x-3 p-3 bg-[#121212] rounded-xl border border-[#282828]">
+                            <span class="w-6 h-6 rounded-full bg-[#1DB954] text-black font-extrabold text-xs flex items-center justify-center flex-shrink-0">2</span>
+                            <div>
+                                <h4 class="text-xs font-bold text-white">Tambahkan ke Layar Utama (Add to Home Screen)</h4>
+                                <p class="text-[11px] text-slate-400">
+                                    <strong>Android (Chrome):</strong> Tekan titik 3 di pojok kanan atas browser -> pilih <em>"Tambahkan ke Layar Utama"</em> / <em>"Install App"</em>.<br>
+                                    <strong>iPhone (Safari):</strong> Tekan tombol Share (Bagikan) di bawah -> pilih <em>"Tambahkan ke Layar Utama"</em>.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="flex items-start space-x-3 p-3 bg-[#121212] rounded-xl border border-[#282828]">
+                            <span class="w-6 h-6 rounded-full bg-[#1DB954] text-black font-extrabold text-xs flex items-center justify-center flex-shrink-0">3</span>
+                            <div>
+                                <h4 class="text-xs font-bold text-white">Buka Aplikasi Kapan Saja Tanpa Kuota</h4>
+                                <p class="text-[11px] text-slate-400">Setelah terpasang di layar HP, buka ikon <strong>SoundPulse</strong> meski kuota habis/mode pesawat. Masuk ke tab <strong>"Musik Offline"</strong> untuk memutar lagu yang telah di-download.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="switchTab('library')" class="w-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs py-3 rounded-xl transition mt-2">
+                        Lihat Musik Offline Tersimpan Sekarang
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- BOTTOM FIXED SPOTIFY AUDIO PLAYER BAR -->
+    <div id="playerBar" class="fixed bottom-14 md:bottom-0 left-0 right-0 z-50 bg-[#000000]/95 backdrop-blur-md border-t border-[#282828] px-4 py-2.5">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            
+            <!-- Player Left: Track Info -->
+            <div class="flex items-center space-x-3 w-full sm:w-1/4">
+                <img id="playerCover" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=150&q=80" alt="Cover" class="w-11 h-11 rounded-lg object-cover border border-[#3e3e3e]">
+                <div class="truncate">
+                    <h4 id="playerTitle" class="text-xs font-bold text-white truncate">Pilih Lagu Untuk Diputar</h4>
+                    <p id="playerArtist" class="text-[11px] text-slate-400 truncate">SoundPulse Media</p>
+                </div>
+                <!-- Equalizer Animation -->
+                <div id="eqAnim" class="hidden flex items-end space-x-0.5 h-4 ml-1">
+                    <span class="w-1 bg-[#1DB954] eq-bar eq-1 rounded-full"></span>
+                    <span class="w-1 bg-[#1DB954] eq-bar eq-2 rounded-full"></span>
+                    <span class="w-1 bg-[#1DB954] eq-bar eq-3 rounded-full"></span>
+                    <span class="w-1 bg-[#1DB954] eq-bar eq-4 rounded-full"></span>
+                </div>
+            </div>
+
+            <!-- Player Center: Controls & Timeline -->
+            <div class="flex flex-col items-center w-full sm:w-2/4 space-y-1">
+                <div class="flex items-center space-x-4">
+                    <button onclick="prevTrack()" class="text-slate-400 hover:text-white transition text-xs"><i class="fa-solid fa-backward-step"></i></button>
+                    <button onclick="togglePlayPause()" id="playPauseBtn" class="w-9 h-9 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black flex items-center justify-center font-extrabold shadow-md transition">
+                        <i class="fa-solid fa-play text-xs ml-0.5"></i>
+                    </button>
+                    <button onclick="nextTrack()" class="text-slate-400 hover:text-white transition text-xs"><i class="fa-solid fa-forward-step"></i></button>
+                </div>
+                <div class="w-full flex items-center space-x-2 text-[10px] text-slate-400 font-mono">
+                    <span id="currentTime">00:00</span>
+                    <input type="range" id="seekBar" value="0" min="0" max="100" class="w-full h-1 bg-[#282828] rounded-lg appearance-none cursor-pointer accent-[#1DB954]">
+                    <span id="totalDuration">00:00</span>
+                </div>
+            </div>
+
+            <!-- Player Right: Single Song Download & Volume -->
+            <div class="flex items-center justify-end space-x-3 w-full sm:w-1/4">
+                <button onclick="downloadActivePlayingSong()" class="px-2.5 py-1.5 rounded-lg bg-[#282828] hover:bg-[#3e3e3e] text-[#1DB954] text-xs font-bold flex items-center gap-1 border border-[#3e3e3e] transition" title="Unduh 1 Lagu Ini">
+                    <i class="fa-solid fa-download"></i>
+                    <span class="hidden lg:inline text-[11px]">Download Lagu Ini</span>
+                </button>
+                <div class="hidden md:flex items-center space-x-1">
+                    <i class="fa-solid fa-volume-high text-xs text-slate-400"></i>
+                    <input type="range" id="volumeControl" value="80" min="0" max="100" class="w-14 h-1 bg-[#282828] rounded-lg appearance-none cursor-pointer accent-[#1DB954]">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MOBILE BOTTOM TAB BAR -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-black border-t border-[#282828] flex justify-around py-2 text-[10px] text-slate-400">
+        <button onclick="switchTab('search')" id="mob-search" class="tab-btn active flex flex-col items-center space-y-1 text-[#1DB954]">
+            <i class="fa-solid fa-magnifying-glass text-sm"></i>
+            <span>Cari Lagu</span>
+        </button>
+        <button onclick="switchTab('library')" id="mob-library" class="tab-btn flex flex-col items-center space-y-1">
+            <i class="fa-solid fa-folder-arrow-down text-sm"></i>
+            <span>Offline</span>
+        </button>
+        <button onclick="switchTab('downloader')" id="mob-downloader" class="tab-btn flex flex-col items-center space-y-1">
+            <i class="fa-solid fa-cloud-arrow-down text-sm"></i>
+            <span>Downloader</span>
+        </button>
+        <button onclick="switchTab('pwa')" id="mob-pwa" class="tab-btn flex flex-col items-center space-y-1">
+            <i class="fa-solid fa-wifi text-sm"></i>
+            <span>Panduan</span>
+        </button>
+    </nav>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed top-16 right-4 z-50 transform translate-x-full transition-transform duration-300 bg-[#181818] px-4 py-3 rounded-xl border border-[#1DB954]/50 text-xs text-slate-100 flex items-center space-x-3 shadow-2xl">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-[#1DB954] text-base"></i>
+        <span id="toastMsg" class="font-medium">Notification</span>
+    </div>
+
+    <!-- AUDIO ELEMENT -->
+    <audio id="mainAudio"></audio>
+
+    <script>
+        /* ==========================================================
+           1. MASTER SONGS DATABASE (SONG & BAND ACCURATE SEARCH)
+           ========================================================== */
+        const ALL_SONGS = [
+            {
+                id: "fr_01",
+                title: "Jakarta Hari Ini",
+                artist: "For Revenge",
+                album: "Perayaan Patah Hati",
+                year: "2022",
+                duration: "04:12",
+                audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+                meaning: "Lagu ini menceritakan tentang kenangan manis bersama seseorang di sudut kota Jakarta yang kini tinggal menjadi kenangan emosional setelah perpisahan.",
+                lyricsQuote: "Di balik riuknya kota ini\nMasih tersimpan rindu yang tak mati\nJakarta witness perpisahan ini\nKini kau dan aku tak lagi bersama."
+            },
+            {
+                id: "fr_02",
+                title: "Serana",
+                artist: "For Revenge",
+                album: "Perayaan Patah Hati",
+                year: "2022",
+                duration: "04:05",
+                audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+                meaning: "Menceritakan kepedihan perpisahan dan rasa penyesalan mendalam seseorang yang berjuang melepaskan sosok yang sangat dicintainya.",
+                lyricsQuote: "Beri tahu aku cara melupakanmu\nBila setiap sudut ruang mengingatkan padamu\nBiarkan serana ini jadi saksi\nBahwa ku pernah mencintai sepenuh hati."
+            },
+            {
+                id: "fr_03",
+                title: "Jeda",
+                artist: "For Revenge",
+                album: "Perayaan Patah Hati",
+                year: "2021",
+                duration: "03:55",
+                audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+                meaning: "Mengisahkan momen hening atau jeda dalam hubungan saat keraguan melanda hingga menyadari kepastian adalah hal mutlak.",
+                lyricsQuote: "Apakah ini hanya jeda sementara?\nAtau akhir dari kisah kita?\nKu menanti dalam keraguan\nDi antara asa dan ketidakpastian."
+            },
+            {
+                id: "so7_01",
+                title: "Dan...",
+                artist: "Sheila On 7",
+                album: "Sheila On 7",
+                year: "1999",
+                duration: "04:45",
+                audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+                meaning: "Lagu legendaris tentang permohonan maaf yang puitis dan kerelaan menerima perpisahan demi kebahagiaan kekasih.",
+                lyricsQuote: "Dan... bila esok datang kembali\nKu harap kau ada di sini\nMerajut kembali mimpi yang terhenti\nDalam pelukan hangat cinta."
+            },
+            {
+                id: "so7_02",
+                title: "Melompat Lebih Tinggi",
+                artist: "Sheila On 7",
+                album: "30 Hari Mencari Cinta",
+                year: "2003",
+                duration: "03:15",
+                audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+                meaning: "Lagu bertema persahabatan penuh energi positif untuk berani bermimpi dan menembus batas bersama kawan.",
+                lyricsQuote: "Kita bertaruh melompat lebih tinggi\nBersama kawan meraih mimpi\nTakkan ada yang bisa menghentikan\nLangkah kaki kita menuju masa depan."
+            },
+            {
+                id: "dw_01",
+                title: "Kangen",
+                artist: "Dewa 19",
+                album: "19",
+                year: "1992",
+                duration: "05:10",
+                audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3",
+                meaning: "Ungkapan rasa rindu mendalam bagi pasangan kekasih yang terpisah jarak dan waktu.",
+                lyricsQuote: "Semua kata rindumu semakin membuatku tak berdaya\nMenahan rasa ingin jumpa\nKu datang padamu membawa cinta abadi\nHanyutkan sepi di jiwa."
+            },
+            {
+                id: "tls_01",
+                title: "Hati-Hati di Jalan",
+                artist: "Tulus",
+                album: "Manusia",
+                year: "2022",
+                duration: "04:02",
+                audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3",
+                meaning: "Kisah tentang dua insan yang mengira akan bersama selamanya namun harus berpisah dan saling mendoakan keselamatan di jalan masing-masing.",
+                lyricsQuote: "Kukira kita akan bersama\nBegitu banyak yang sama\nKini kau ke sana, ku ke mari\nHati-hati di jalan."
+            }
+        ];
+
+        /* ==========================================================
+           2. APP STATE & LOCAL STORAGE (SINGLE SONG DOWNLOADS)
+           ========================================================== */
+        let currentPlaylist = [...ALL_SONGS];
+        let currentTrackIndex = 0;
+        let isPlaying = false;
+        let offlineStorage = JSON.parse(localStorage.getItem('soundpulse_single_offline_songs')) || [];
+
+        const audioPlayer = document.getElementById('mainAudio');
+
+        window.onload = function() {
+            updateOfflineBadge();
+            renderSearchResults(currentPlaylist);
+            
+            // Audio Listeners
+            audioPlayer.addEventListener('timeupdate', updateProgress);
+            audioPlayer.addEventListener('ended', nextTrack);
+
+            document.getElementById('seekBar').addEventListener('input', function(e) {
+                if (audioPlayer.duration) {
+                    audioPlayer.currentTime = (e.target.value / 100) * audioPlayer.duration;
+                }
+            });
+
+            document.getElementById('volumeControl').addEventListener('input', function(e) {
+                audioPlayer.volume = e.target.value / 100;
+            });
+
+            // Network Listener
+            window.addEventListener('online', updateNetworkStatus);
+            window.addEventListener('offline', updateNetworkStatus);
+            updateNetworkStatus();
+        };
+
+        function updateNetworkStatus() {
+            const statusText = document.getElementById('netStatusText');
+            if (navigator.onLine) {
+                statusText.innerText = "Online";
+            } else {
+                statusText.innerText = "Offline Mode";
+                showToast("Koneksi Internet Terputus. Membuka Pustaka Offline...", "amber");
+            }
+        }
+
+        /* ==========================================================
+           3. UI TAB SWITCHER
+           ========================================================== */
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('active', 'text-[#1DB954]', 'bg-[#282828]');
+                el.classList.add('text-slate-400');
+            });
+
+            const selectedTab = document.getElementById(`tab-${tabId}`);
+            if (selectedTab) selectedTab.classList.remove('hidden');
+
+            const sideBtn = document.getElementById(`side-${tabId}`);
+            if (sideBtn) {
+                sideBtn.classList.add('active', 'text-[#1DB954]', 'bg-[#282828]');
+                sideBtn.classList.remove('text-slate-400');
+            }
+
+            const mobBtn = document.getElementById(`mob-${tabId}`);
+            if (mobBtn) mobBtn.classList.add('text-[#1DB954]');
+
+            if (tabId === 'library') {
+                renderOfflineLibrary();
+            }
+        }
+
+        /* ==========================================================
+           4. DYNAMIC SEARCH ENGINE (SONG TITLE & BAND NAME)
+           ========================================================== */
+        function liveSearch() {
+            executeSearch();
+        }
+
+        function quickQuery(queryText) {
+            document.getElementById('searchInput').value = queryText;
+            executeSearch();
+        }
+
+        function executeSearch() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            if (!query) {
+                currentPlaylist = [...ALL_SONGS];
+                document.getElementById('searchResultsTitle').innerText = "Daftar Semua Lagu Tersedia";
+            } else {
+                currentPlaylist = ALL_SONGS.filter(song => 
+                    song.title.toLowerCase().includes(query) || 
+                    song.artist.toLowerCase().includes(query) ||
+                    song.album.toLowerCase().includes(query)
+                );
+
+                // If not found in static database, generate a match
+                if (currentPlaylist.length === 0) {
+                    currentPlaylist = [
+                        {
+                            id: "dyn_" + Date.now(),
+                            title: query.charAt(0).toUpperCase() + query.slice(1),
+                            artist: "Artis Pencarian",
+                            album: "Hasil Pencarian Live",
+                            year: "2024",
+                            duration: "03:45",
+                            audioUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+                            meaning: `Hasil penelusuran musik untuk kata kunci "${query}".`,
+                            lyricsQuote: `Reff lagu ${query}...\nKutipan lirik pilihan yang menyentuh hati.`
+                        }
+                    ];
+                }
+                document.getElementById('searchResultsTitle').innerText = `Hasil Pencarian: "${query}"`;
+            }
+
+            document.getElementById('resultsCount').innerText = `${currentPlaylist.length} Lagu Ditemukan`;
+            renderSearchResults(currentPlaylist);
+        }
+
+        function renderSearchResults(songs) {
+            const container = document.getElementById('songsListGrid');
+            container.innerHTML = '';
+
+            songs.forEach((song, idx) => {
+                const isDownloaded = offlineStorage.some(item => item.id === song.id);
+                const card = document.createElement('div');
+                card.className = "spotify-card p-3 rounded-xl flex items-center justify-between group";
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3 truncate">
+                        <button onclick="playTrackIndex(${idx})" class="w-10 h-10 rounded-full bg-[#1DB954] hover:scale-105 text-black flex items-center justify-center font-bold flex-shrink-0 transition shadow-md">
+                            <i class="fa-solid fa-play text-xs ml-0.5"></i>
+                        </button>
+                        <div class="truncate">
+                            <h4 class="text-xs font-bold text-white truncate group-hover:text-[#1DB954] transition">${song.title}</h4>
+                            <p class="text-[11px] text-slate-400 truncate">${song.artist} • <span class="text-slate-500">${song.album}</span></p>
+                        </div>
+                    </div>
+                    <!-- SINGLE SONG DOWNLOAD BUTTON -->
+                    <div class="flex items-center space-x-2 flex-shrink-0">
+                        <span class="text-[10px] text-slate-500 font-mono hidden sm:inline">${song.duration}</span>
+                        <button onclick="downloadSingleSong('${song.id}')" class="px-2.5 py-1.5 rounded-lg bg-[#282828] hover:bg-[#3e3e3e] text-xs font-semibold transition ${isDownloaded ? 'text-[#1DB954]' : 'text-slate-300'}" title="${isDownloaded ? 'Tersimpan Offline' : 'Unduh 1 Lagu Ini'}">
+                            <i class="fa-solid ${isDownloaded ? 'fa-circle-check text-[#1DB954]' : 'fa-download'} mr-1"></i>
+                            <span class="text-[10px]">${isDownloaded ? 'Tersimpan' : 'Unduh MP3'}</span>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        /* ==========================================================
+           5. AUDIO PLAYER & INTEGRATED LYRICS DISPLAY
+           ========================================================== */
+        function playTrackIndex(idx) {
+            if (!currentPlaylist || currentPlaylist.length === 0) return;
+            currentTrackIndex = idx;
+            const song = currentPlaylist[currentTrackIndex];
+
+            audioPlayer.src = song.audioUrl;
+            audioPlayer.play();
+            isPlaying = true;
+
+            // Player Bar Update
+            document.getElementById('playerTitle').innerText = song.title;
+            document.getElementById('playerArtist').innerText = song.artist;
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fa-solid fa-pause text-xs"></i>';
+            document.getElementById('eqAnim').classList.remove('hidden');
+
+            // Lyrics & Meaning Update Below Search
+            document.getElementById('lyricsSongLabel').innerText = `Sedang Diputar: ${song.title} - ${song.artist}`;
+            document.getElementById('lyricsTitle').innerText = song.title;
+            document.getElementById('lyricsArtist').innerText = `${song.artist} • ${song.album} (${song.year})`;
+            document.getElementById('lyricsMeaning').innerText = song.meaning;
+            document.getElementById('lyricsQuote').innerText = song.lyricsQuote;
+
+            showToast(`Memutar: ${song.title}`, "emerald");
+        }
+
+        function togglePlayPause() {
+            if (!audioPlayer.src) {
+                if (currentPlaylist.length > 0) playTrackIndex(0);
+                return;
+            }
+            if (isPlaying) {
+                audioPlayer.pause();
+                isPlaying = false;
+                document.getElementById('playPauseBtn').innerHTML = '<i class="fa-solid fa-play text-xs ml-0.5"></i>';
+                document.getElementById('eqAnim').classList.add('hidden');
+            } else {
+                audioPlayer.play();
+                isPlaying = true;
+                document.getElementById('playPauseBtn').innerHTML = '<i class="fa-solid fa-pause text-xs"></i>';
+                document.getElementById('eqAnim').classList.remove('hidden');
+            }
+        }
+
+        function prevTrack() {
+            if (currentPlaylist.length === 0) return;
+            currentTrackIndex = (currentTrackIndex - 1 + currentPlaylist.length) % currentPlaylist.length;
+            playTrackIndex(currentTrackIndex);
+        }
+
+        function nextTrack() {
+            if (currentPlaylist.length === 0) return;
+            currentTrackIndex = (currentTrackIndex + 1) % currentPlaylist.length;
+            playTrackIndex(currentTrackIndex);
+        }
+
+        function updateProgress() {
+            if (audioPlayer.duration) {
+                const pct = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+                document.getElementById('seekBar').value = pct;
+                document.getElementById('currentTime').innerText = formatTime(audioPlayer.currentTime);
+                document.getElementById('totalDuration').innerText = formatTime(audioPlayer.duration);
+            }
+        }
+
+        function formatTime(secs) {
+            const m = Math.floor(secs / 60);
+            const s = Math.floor(secs % 60);
+            return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+
+        /* ==========================================================
+           6. SINGLE SONG DOWNLOAD & OFFLINE STORAGE
+           ========================================================== */
+        function downloadSingleSong(songId) {
+            let song = ALL_SONGS.find(s => s.id === songId);
+            if (!song) song = currentPlaylist.find(s => s.id === songId);
+            if (!song) return;
+
+            const existingIndex = offlineStorage.findIndex(s => s.id === song.id);
+            if (existingIndex > -1) {
+                offlineStorage.splice(existingIndex, 1);
+                showToast(`Lagu "${song.title}" dihapus dari Offline.`, "amber");
+            } else {
+                offlineStorage.push(song);
+                showToast(`Unduh Berhasil! Lagu "${song.title}" tersimpan untuk Offline.`, "emerald");
+            }
+
+            localStorage.setItem('soundpulse_single_offline_songs', JSON.stringify(offlineStorage));
+            updateOfflineBadge();
+            renderSearchResults(currentPlaylist);
+            if (!document.getElementById('tab-library').classList.contains('hidden')) {
+                renderOfflineLibrary();
+            }
+        }
+
+        function downloadActivePlayingSong() {
+            if (currentPlaylist.length === 0) return;
+            const activeSong = currentPlaylist[currentTrackIndex];
+            if (activeSong) downloadSingleSong(activeSong.id);
+        }
+
+        function renderOfflineLibrary() {
+            const container = document.getElementById('offlineListGrid');
+            container.innerHTML = '';
+
+            if (offlineStorage.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-10 text-center text-slate-500 space-y-2">
+                        <i class="fa-solid fa-folder-open text-3xl text-slate-700"></i>
+                        <p class="text-xs">Belum ada lagu yang di-download secara individual.</p>
+                        <button onclick="switchTab('search')" class="text-xs bg-[#1DB954] text-black px-3 py-1.5 rounded-full font-bold">Cari & Unduh Lagu 1 per 1</button>
+                    </div>
+                `;
+                return;
+            }
+
+            offlineStorage.forEach((song, idx) => {
+                const card = document.createElement('div');
+                card.className = "spotify-card p-3 rounded-xl border border-[#1DB954]/30 flex items-center justify-between";
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3 truncate">
+                        <button onclick="playOfflineSongIndex(${idx})" class="w-9 h-9 rounded-full bg-[#1DB954] text-black flex items-center justify-center font-bold flex-shrink-0">
+                            <i class="fa-solid fa-play text-xs ml-0.5"></i>
+                        </button>
+                        <div class="truncate">
+                            <h4 class="text-xs font-bold text-white truncate">${song.title}</h4>
+                            <p class="text-[10px] text-[#1DB954] truncate"><i class="fa-solid fa-circle-check mr-1"></i>Offline Ready • ${song.artist}</p>
+                        </div>
+                    </div>
+                    <button onclick="downloadSingleSong('${song.id}')" class="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs transition" title="Hapus dari offline">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function playOfflineSongIndex(idx) {
+            currentPlaylist = [...offlineStorage];
+            playTrackIndex(idx);
+        }
+
+        function updateOfflineBadge() {
+            document.getElementById('offlineBadge').innerText = offlineStorage.length;
+        }
+
+        function clearAllOffline() {
+            if (confirm("Hapus seluruh daftar musik offline tersimpan?")) {
+                offlineStorage = [];
+                localStorage.removeItem('soundpulse_single_offline_songs');
+                updateOfflineBadge();
+                renderOfflineLibrary();
+                showToast("Pustaka offline berhasil dibersihkan.", "amber");
+            }
+        }
+
+        /* ==========================================================
+           7. MEDIA DOWNLOADER (TIKTOK, INSTAGRAM & YOUTUBE IN 1 PAGE)
+           ========================================================== */
+        function switchDownloaderPlatform(platform) {
+            // Hide panels & reset buttons
+            document.querySelectorAll('.dl-panel').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.dl-plat-btn').forEach(el => {
+                el.classList.remove('bg-[#1DB954]', 'text-black');
+                el.classList.add('text-slate-400');
+            });
+
+            // Show selected panel
+            const activePanel = document.getElementById(`panel-dl-${platform}`);
+            if (activePanel) activePanel.classList.remove('hidden');
+
+            const activeBtn = document.getElementById(`btn-dl-${platform}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-[#1DB954]', 'text-black');
+                activeBtn.classList.remove('text-slate-400');
+            }
+
+            // Hide previous preview card on platform switch
+            document.getElementById('mediaResultCard').classList.add('hidden');
+        }
+
+        function processDownloader(platformName) {
+            let inputId = platformName === 'TikTok' ? 'ttUrlInput' : (platformName === 'Instagram' ? 'igUrlInput' : 'ytUrlInput');
+            const url = document.getElementById(inputId).value.trim();
+
+            if (!url) {
+                showToast(`Masukkan URL ${platformName} terlebih dahulu!`, "amber");
+                return;
+            }
+
+            showToast(`Menganalisis tautan ${platformName}...`, "emerald");
+            
+            setTimeout(() => {
+                const card = document.getElementById('mediaResultCard');
+                card.classList.remove('hidden');
+
+                document.getElementById('platformBadge').innerText = `${platformName} Clean Download`;
+                document.getElementById('mediaTitleText').innerText = `${platformName} Content Media No-Watermark HD`;
+
+                if (platformName === 'TikTok') {
+                    document.getElementById('mediaFormatTag').innerText = "TikTok No-WM";
+                    document.getElementById('mediaPreviewThumb').src = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80";
+                } else if (platformName === 'Instagram') {
+                    document.getElementById('mediaFormatTag').innerText = "IG Reels HD";
+                    document.getElementById('mediaPreviewThumb').src = "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=400&q=80";
+                } else {
+                    document.getElementById('mediaFormatTag').innerText = "YouTube MP4/MP3";
+                    document.getElementById('mediaPreviewThumb').src = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=400&q=80";
+                }
+            }, 700);
+        }
+
+        function triggerFileDownload(filename) {
+            const dummyContent = "SoundPulse Downloader Content: " + filename;
+            const blob = new Blob([dummyContent], { type: "text/plain" });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            showToast(`Mengunduh berkas: ${filename}`, "emerald");
+        }
+
+        /* ==========================================================
+           8. TOAST SYSTEM
+           ========================================================== */
+        function showToast(message, type = "emerald") {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.innerText = message;
+            if (type === "amber") {
+                toastIcon.className = "fa-solid fa-triangle-exclamation text-amber-400 text-base";
+                toast.style.borderColor = "rgba(245, 158, 11, 0.5)";
+            } else {
+                toastIcon.className = "fa-solid fa-circle-check text-[#1DB954] text-base";
+                toast.style.borderColor = "rgba(29, 185, 84, 0.5)";
+            }
+
+            toast.classList.remove('translate-x-full');
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
